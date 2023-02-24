@@ -1,3 +1,7 @@
+### Dependencies
+```sudo apt install ros-foxy-pcl-ros```
+
+### Description
 This library includes some tools for laser handling in ROS. At the moment two nodes are available:
 
  - laserscan_multi_merger
