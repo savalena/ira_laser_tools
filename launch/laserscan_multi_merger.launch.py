@@ -40,7 +40,8 @@ def generate_launch_description():
                              'angle_max': angle_max,
                              'angle_increment': angle_increment,
                              }],
-                arguments=['--ros-args', '--log-level', 'info'],),
+                arguments=['--ros-args', '--log-level', 'info'],
+                emulate_tty=True,),
         ]
     )
 

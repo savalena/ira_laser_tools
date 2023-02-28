@@ -1,5 +1,8 @@
 *.user
 .vscode/
+cmake-build-debug/
+.idea/
+__pycache__/
 build
 install
 log

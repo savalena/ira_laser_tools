@@ -57,6 +57,8 @@ private:
 	string cloud_destination_topic;
 	string scan_destination_topic;
 	string laserscan_topics;
+
+    bool topic_appeared = false;
 };
 
 LaserscanMerger::LaserscanMerger() : Node("laserscan_multi_merger")
@@ -154,24 +156,28 @@ void LaserscanMerger::laserscan_topic_parser()
 	copy(istream_iterator<string>(iss), istream_iterator<string>(), inserter<set<string>>(tokens, tokens.begin()));
 	std::vector<string> tmp_input_topics;
 
-	while (!tokens.empty())
-	{
-		RCLCPP_INFO(this->get_logger(), "Waiting for topics ...");
-		sleep(1);
+// Due to ros1-bridge use, all streamed topics can not be listed
 
-		topics = this->get_topic_names_and_types();
+//	while (!tokens.empty())
+//	{
+//		RCLCPP_INFO(this->get_logger(), "Waiting for topics ...");
+//		sleep(1);
+//
+//		topics = this->get_topic_names_and_types();
+//		for (const auto &topic_it : topics)
+//		{
+//			std::vector<std::string> topic_types = topic_it.second;
+//			if (std::find(topic_types.begin(), topic_types.end(), "sensor_msgs/msg/LaserScan") != topic_types.end() && tokens.erase(topic_it.first) > 0)
+//			{
+//				tmp_input_topics.push_back(topic_it.first);
+//			}
+//		}
+//	}
 
-		for (const auto &topic_it : topics)
-		{
-			std::vector<std::string> topic_types = topic_it.second;
-
-			if (std::find(topic_types.begin(), topic_types.end(), "sensor_msgs/msg/LaserScan") != topic_types.end() && tokens.erase(topic_it.first) > 0)
-			{
-				tmp_input_topics.push_back(topic_it.first);
-			}
-		}
-	}
-
+    for (string topic : tokens) {
+        RCLCPP_INFO(this->get_logger(), "Subscribing to topic " + topic);
+        tmp_input_topics.push_back(topic);
+    }
 	sort(tmp_input_topics.begin(), tmp_input_topics.end());
 	std::vector<string>::iterator last = std::unique(tmp_input_topics.begin(), tmp_input_topics.end());
 	tmp_input_topics.erase(last, tmp_input_topics.end());
@@ -186,7 +192,8 @@ void LaserscanMerger::laserscan_topic_parser()
 			scan_subscribers.resize(input_topics.size());
 			clouds_modified.resize(input_topics.size());
 			clouds.resize(input_topics.size());
-			RCLCPP_INFO(this->get_logger(), "Subscribing to topics\t%ld", scan_subscribers.size());
+//			RCLCPP_INFO(this->get_logger(), "Subscribing to topics\t%ld", scan_subscribers.size());
+			RCLCPP_WARN(this->get_logger(), "Wait for `STREAM!`... or make sure that topics are published");
 			for (std::vector<int>::size_type i = 0; i < input_topics.size(); ++i)
 			{
 				// workaround for std::bind https://github.com/ros2/rclcpp/issues/583
@@ -208,8 +215,12 @@ void LaserscanMerger::laserscan_topic_parser()
 
 void LaserscanMerger::scanCallback(sensor_msgs::msg::LaserScan::SharedPtr scan, std::string topic)
 {
-	sensor_msgs::msg::PointCloud2 tmpCloud1, tmpCloud2;
+    if (!topic_appeared) {
+        RCLCPP_INFO(this->get_logger(), "STREAM!");
+        topic_appeared = true;
+    }
 
+	sensor_msgs::msg::PointCloud2 tmpCloud1, tmpCloud2;
 	try
 	{
 		// Verify that TF knows how to transform from the received scan to the destination scan frame
